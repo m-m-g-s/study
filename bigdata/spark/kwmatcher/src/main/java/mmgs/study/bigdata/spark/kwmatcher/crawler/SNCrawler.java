@@ -5,6 +5,6 @@ import mmgs.study.bigdata.spark.kwmatcher.model.TaggedClick;
 import java.util.List;
 
 public interface SNCrawler {
-    List<SNItem> extractEvents(TaggedClick taggedClick, String connectionKey) throws Exception;
+    List<SNItem> extract(TaggedClick taggedClick, String connectionKey) throws Exception;
 //    JSONObject extractPlace();
 }

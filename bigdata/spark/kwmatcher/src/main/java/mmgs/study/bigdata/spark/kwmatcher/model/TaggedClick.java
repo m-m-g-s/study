@@ -53,6 +53,17 @@ public class TaggedClick implements Serializable {
         return result;
     }
 
+    @Override
+    public String toString() {
+        return "TaggedClick{" +
+                "id='" + id + '\'' +
+                ", day='" + day + '\'' +
+                ", longitude=" + longitude +
+                ", latitude=" + latitude +
+                ", tags='" + tags + '\'' +
+                '}';
+    }
+
     public void clearId() {this.id = null;}
 
     public String getId() {

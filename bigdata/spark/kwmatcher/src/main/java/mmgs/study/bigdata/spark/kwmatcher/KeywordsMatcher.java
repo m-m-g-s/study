@@ -1,9 +1,7 @@
 package mmgs.study.bigdata.spark.kwmatcher;
 
 import mmgs.study.bigdata.spark.kwmatcher.conf.AppProperties;
-import mmgs.study.bigdata.spark.kwmatcher.crawler.MeetupCrawler;
-import mmgs.study.bigdata.spark.kwmatcher.crawler.SNCrawler;
-import mmgs.study.bigdata.spark.kwmatcher.crawler.SNItem;
+import mmgs.study.bigdata.spark.kwmatcher.crawler.*;
 import mmgs.study.bigdata.spark.kwmatcher.model.TaggedClick;
 import mmgs.study.bigdata.spark.kwmatcher.model.TaggedSN;
 import mmgs.study.bigdata.spark.kwmatcher.model.WeightedKeyword;
@@ -32,6 +30,8 @@ import java.util.stream.Stream;
 
 public class KeywordsMatcher {
 
+    private static final int TOP_AMT = 10;
+
     public static void main(String[] args) {
         ConfigurableApplicationContext ctx = new SpringApplicationBuilder(KeywordsMatcher.class).run(args);
         AppProperties props = ctx.getBean(AppProperties.class);
@@ -42,34 +42,71 @@ public class KeywordsMatcher {
                 .registerKryoClasses(new Class[]{TaggedClick.class, TaggedSN.class});
 
         JavaSparkContext javaSparkContext = new JavaSparkContext(sparkConf);
-        // TODO: move sql context to reader/writer
         SQLContext sqlContext = new org.apache.spark.sql.SQLContext(javaSparkContext);
 
         // initialize meetup connection keys
-        // Stub for keys
-        // TODO: provide file path as a parameter
         JavaRDD<String> keysRDD = javaSparkContext.textFile(props.getMeetupProp().getPathToKeys());
         List<String> keysArr = keysRDD.collect();
         javaSparkContext.broadcast(keysArr);
 
         // initialize click dataset
         Storage storage = new HBaseStorage();
-        // for each row we need to take one pseudo-random meetup key
         JavaRDD<TaggedClick> taggedClicksRDD = storage.readTaggedClicks(sqlContext);
 
-        SNCrawler crawler = new MeetupCrawler();
+        SNCrawler eventsCrawler = new MeetupEventsCrawler();
+        SNCrawler venuesCrawler = new MeetupVenuesCrawler();
+
+/*
+        try {
+            venuesCrawler.extract(new TaggedClick("xyz1", "20161031", 40.6643, -73.9385, "java, scala"), keysArr.get(1));
+            System.out.println();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+*/
 
         // transformations
         // extract keywords for each click
         // TODO: make sure that keywords are delimited by spaces
-        JavaPairRDD<TaggedClick, List<WeightedKeyword>> enrichedTaggedClicksRDD = taggedClicksRDD.flatMapToPair(new SNKeywordsMapper(crawler, keysArr));
+        JavaPairRDD<TaggedClick, List<WeightedKeyword>> enrichedTaggedClicksRDD = taggedClicksRDD.flatMapToPair(new PairFlatMapFunction<TaggedClick, TaggedClick, List<WeightedKeyword>>() {
+            private final Random random = new Random();
+            @Override
+            public Iterable<Tuple2<TaggedClick, List<WeightedKeyword>>> call(TaggedClick taggedClick) throws Exception {
+                int i = random.nextInt(keysArr.size());
+                String key = keysArr.get(i);
+                List<SNItem> snItems = new ArrayList<>();
+                snItems.addAll(eventsCrawler.extract(taggedClick, key));
+                snItems.addAll(venuesCrawler.extract(taggedClick, key));
+                Stream<List<WeightedKeyword>> listStream = snItems.stream().map(x -> {
+                    try {
+                        return KeywordsExtractor.getTopN(x.getDescription(), TOP_AMT);
+                    } catch (IOException e) {
+                        // TODO: handle exception properly
+                        e.printStackTrace();
+                        return new ArrayList<WeightedKeyword>();
+                    }
+                });
+                taggedClick.clearId();
+                return listStream.map(x -> new Tuple2<>(taggedClick, x))::iterator;
+            }
+        });
 
-        // combine clicks for identical
-        JavaPairRDD<TaggedClick, List<WeightedKeyword>> aggregatedTaggedClicksRDD = enrichedTaggedClicksRDD
-                .reduceByKey((Function2<List<WeightedKeyword>, List<WeightedKeyword>, List<WeightedKeyword>>) (keywords1, keywords2) -> Utils.mergeKeywords(keywords1, keywords2));
+        System.out.println(enrichedTaggedClicksRDD.first());
 
+        // combine clicks for identical date+location+keywords
+        JavaPairRDD<TaggedClick,  List<WeightedKeyword>> aggregatedTaggedClicksRDD = enrichedTaggedClicksRDD
+                .reduceByKey((Function2<List<WeightedKeyword>, List<WeightedKeyword>, List<WeightedKeyword>>) (keywords1, keywords2) -> {
+                    List<WeightedKeyword> keywords = new ArrayList<>();
+                    keywords.addAll(keywords1);
+                    keywords.addAll(keywords2);
+                    return keywords;
+                });
+
+        System.out.println(aggregatedTaggedClicksRDD.first());
         // convert to final dataset structure
-        JavaRDD<TaggedSN> snTaggedRDD = aggregatedTaggedClicksRDD.map(new SNTaggedClickMapper());
+        JavaRDD<TaggedSN> snTaggedRDD = aggregatedTaggedClicksRDD.map(
+                (Function<Tuple2<TaggedClick, List<WeightedKeyword>>, TaggedSN>) taggedClickListTuple2
+                        -> new TaggedSN(taggedClickListTuple2._1(), Utils.getTopN(taggedClickListTuple2._2(), TOP_AMT)));
 
         HiveContext hiveContext = new HiveContext(javaSparkContext);
         DataFrame dataFrame = hiveContext.createDataFrame(snTaggedRDD.rdd(), TaggedSN.class);
@@ -82,41 +119,5 @@ public class KeywordsMatcher {
         dataFrame.write().format("orc").option("header", "false").save(props.getHiveProp().getTableSavePath());
     }
 
-    private static class SNKeywordsMapper implements PairFlatMapFunction<TaggedClick, TaggedClick, List<WeightedKeyword>> {
-        private final SNCrawler crawler;
-        private final Random random;
-        private final List<String> keys;
-
-        public SNKeywordsMapper(SNCrawler crawler, List<String> keys) {
-            this.crawler = crawler;
-            this.random = new Random();
-            this.keys = Collections.unmodifiableList(keys);
-        }
-
-        @Override
-        public Iterable<Tuple2<TaggedClick, List<WeightedKeyword>>> call(TaggedClick taggedClick) throws Exception {
-            int i = random.nextInt(keys.size());
-            String key = keys.get(i);
-            List<SNItem> snEvents = crawler.extractEvents(taggedClick, key);
-            Stream<List<WeightedKeyword>> listStream = snEvents.stream().map(x -> {
-                try {
-                    return KeywordsExtractor.getTopN(x.getDescription(), 10);
-                } catch (IOException e) {
-                    // TODO: handle exception properly
-                    e.printStackTrace();
-                    return new ArrayList<WeightedKeyword>();
-                }
-            });
-            taggedClick.clearId();
-            return listStream.map(x -> new Tuple2<>(taggedClick, x))::iterator;
-        }
-    }
-
-    private static class SNTaggedClickMapper implements Function<Tuple2<TaggedClick, List<WeightedKeyword>>, TaggedSN> {
-        @Override
-        public TaggedSN call(Tuple2<TaggedClick, List<WeightedKeyword>> taggedClickListTuple2) throws Exception {
-            return new TaggedSN(taggedClickListTuple2._1(), taggedClickListTuple2._2().stream().map(x -> x.getKeyword()).collect(Collectors.joining(" ")));
-        }
-    }
 }
 

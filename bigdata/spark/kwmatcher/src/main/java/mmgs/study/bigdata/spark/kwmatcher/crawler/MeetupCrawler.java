@@ -2,58 +2,50 @@ package mmgs.study.bigdata.spark.kwmatcher.crawler;
 
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.JsonNode;
-import com.mashape.unirest.http.Unirest;
-import mmgs.study.bigdata.spark.kwmatcher.model.TaggedClick;
+import mmgs.study.bigdata.spark.kwmatcher.tokenizer.KeywordsExtractor;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
+import java.io.IOException;
 import java.io.Serializable;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.*;
 
 /**
  *
  */
-public class MeetupCrawler implements SNCrawler, Serializable {
-    private static final String BASE_REQUEST = "https://api.meetup.com/2/";
-    private static final String EVENTS_REQUEST = "open_events";
-    private static final String EVENTS_COLUMNS = "id,description";
-    private static final String PLACES_REQUEST = "open_venues";
-    private static final String RESPONSE_FORMAT = "?text_format=plain";
+public abstract class MeetupCrawler implements SNCrawler, Serializable {
     private static final int SUCCESS = 200;
 
-    private static final String DATE_FORMAT = "yyyyMMdd";
+    protected static final String BASE_REQUEST = "https://api.meetup.com/2/";
+    protected static final String RESPONSE_FORMAT = "?text_format=plain";
 
-    private boolean dataExtracted(HttpResponse<JsonNode> response) {
+    protected static final Map<String, Object> QUERY_PARAMS = initQueryParams();
+    protected static final String KEY_PARAM = "key";
+    protected static final String TEXT_PARAM = "text";
+    protected static final String LATITUDE_PARAM = "lat";
+    protected static final String LONGITUDE_PARAM = "lon";
+
+    private static Map<String, Object> initQueryParams() {
+        Map<String, String> result = new HashMap<>();
+        result.put("sign", "true");
+        result.put("status", "upcoming");
+        return Collections.unmodifiableMap(result);
+    }
+
+    protected boolean dataExtracted(HttpResponse<JsonNode> response) {
         return response.getStatus() == SUCCESS;
     }
 
-    @Override
-    public List<SNItem> extractEvents(TaggedClick taggedClick, String connectionKey) throws Exception {
-        // TODO: move hardcode to constants
-        // date range to milliseconds
-        LocalDate date = LocalDate.parse(taggedClick.getDay(), DateTimeFormatter.ofPattern(DATE_FORMAT));
-        ZonedDateTime zDate = date.atStartOfDay().atZone(ZoneId.of("Etc/UTC"));
-        String queryDate = "" + zDate.minusWeeks(1).toInstant().toEpochMilli() + ',' + zDate.plusWeeks(1).toInstant().toEpochMilli();
-
-        HttpResponse<JsonNode> jsonResponse = Unirest.get(BASE_REQUEST + EVENTS_REQUEST + RESPONSE_FORMAT)
-                .queryString("key", connectionKey)
-                .queryString("sign", "true")
-                .queryString("only", EVENTS_COLUMNS)
-                .queryString("status", "upcoming")
-                .queryString("text", taggedClick.getTags())
-                .queryString("time", queryDate)
-                .queryString("lat", Double.toString(taggedClick.getLatitude()))
-                .queryString("lon", Double.toString(taggedClick.getLongitude()))
-                .asJson();
-
-        if (dataExtracted(jsonResponse)) {
-            return SNItem.fromJSON(jsonResponse.getBody().getObject().getJSONArray("results"));
-        } else {
-            // TODO: handle exceptions properly
-            System.out.println(jsonResponse.getStatus());
-            throw new Exception("Something went wrong");
+    public List<SNItem> extractSNItems(JSONArray jsonArray) throws IOException {
+        List<SNItem> snItems = new ArrayList<>();
+        Iterator<Object> iterator = jsonArray.iterator();
+        while (iterator.hasNext()) {
+            SNItem snItem = extractSNItem((JSONObject) iterator.next());
+            KeywordsExtractor.getKeywordsList(snItem.getDescription());
+            snItems.add(snItem);
         }
+        return Collections.unmodifiableList(snItems);
     }
+
+    public abstract SNItem extractSNItem(JSONObject json);
 }

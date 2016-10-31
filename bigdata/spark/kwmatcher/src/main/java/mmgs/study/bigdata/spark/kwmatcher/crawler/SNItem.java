@@ -1,15 +1,6 @@
 package mmgs.study.bigdata.spark.kwmatcher.crawler;
 
-import mmgs.study.bigdata.spark.kwmatcher.tokenizer.KeywordsExtractor;
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * POJO for Social Network event
@@ -21,26 +12,12 @@ public class SNItem implements Serializable {
     private String id;
     private String description;
 
-    public SNItem() {}
-
-    public SNItem(JSONObject json) {
-        this.id = json.getString(ID);
-        this.description = json.getString(DESCRIPTION);
+    public SNItem() {
     }
 
-    public static SNItem fromJSON(JSONObject json) {
-        return new SNItem(json);
-    }
-
-    public static List<SNItem> fromJSON(JSONArray jsonArray) throws IOException {
-        List<SNItem> snItems = new ArrayList<>();
-        Iterator<Object> iterator = jsonArray.iterator();
-        while (iterator.hasNext()) {
-            SNItem snItem = new SNItem((JSONObject) iterator.next());
-            KeywordsExtractor.getKeywordsList(snItem.description);
-            snItems.add(snItem);
-        }
-        return Collections.unmodifiableList(snItems);
+    public SNItem(String id, String description) {
+        this.id = id;
+        this.description = description;
     }
 
     public String getId() {
@@ -57,5 +34,13 @@ public class SNItem implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    @Override
+    public String toString() {
+        return "SNItem{" +
+                "id='" + id + '\'' +
+                ", description='" + description + '\'' +
+                '}';
     }
 }

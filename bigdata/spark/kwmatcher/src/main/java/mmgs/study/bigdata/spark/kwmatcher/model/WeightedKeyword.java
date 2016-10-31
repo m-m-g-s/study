@@ -11,17 +11,9 @@ public class WeightedKeyword implements Serializable {
     private String keyword;
     private long frequency;
 
-    public WeightedKeyword() {
-    }
-
     public WeightedKeyword(String keyword, long frequency) {
         this.keyword = keyword;
         this.frequency = frequency;
-    }
-
-    public WeightedKeyword(WeightedKeyword keyword) {
-        this.keyword = keyword.getKeyword();
-        this.frequency = keyword.getFrequency();
     }
 
     public WeightedKeyword(CardKeyword cardKeyword) {
@@ -33,16 +25,8 @@ public class WeightedKeyword implements Serializable {
         return keyword;
     }
 
-    public void setKeyword(String keyword) {
-        this.keyword = keyword;
-    }
-
     public long getFrequency() {
         return frequency;
-    }
-
-    public void setFrequency(long frequency) {
-        this.frequency = frequency;
     }
 
     @Override
@@ -54,7 +38,6 @@ public class WeightedKeyword implements Serializable {
 
         if (frequency != that.frequency) return false;
         return keyword.equals(that.keyword);
-
     }
 
     @Override
