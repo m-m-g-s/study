@@ -1,5 +1,6 @@
 package mmgs.study.bigdata.spark.kwmatcher;
 
+import mmgs.study.bigdata.spark.kwmatcher.conf.AppProperties;
 import mmgs.study.bigdata.spark.kwmatcher.crawler.MeetupCrawler;
 import mmgs.study.bigdata.spark.kwmatcher.crawler.SNCrawler;
 import mmgs.study.bigdata.spark.kwmatcher.crawler.SNItem;
@@ -20,6 +21,8 @@ import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.hive.HiveContext;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ConfigurableApplicationContext;
 import scala.Tuple2;
 
 import java.io.IOException;
@@ -30,24 +33,22 @@ import java.util.stream.Stream;
 public class KeywordsMatcher {
 
     public static void main(String[] args) {
+        ConfigurableApplicationContext ctx = new SpringApplicationBuilder(KeywordsMatcher.class).run(args);
+        AppProperties props = ctx.getBean(AppProperties.class);
+
         // Initialize spark application
-        // TODO: parameters must be configured via separate parameter file
-        SparkConf sparkConf = new SparkConf()
-                .setAppName("Keywords Matcher")
-                // TODO: move master to parameters
-                .setMaster("local[*]")
-                // TODO: move spark.executor.memory to parameters
-                .set("spark.executor.memory", "2g")
+        SparkConf sparkConf = ctx.getBean(SparkConf.class)
                 .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
                 .registerKryoClasses(new Class[]{TaggedClick.class, TaggedSN.class});
 
         JavaSparkContext javaSparkContext = new JavaSparkContext(sparkConf);
-        SQLContext sqlContext = new SQLContext(javaSparkContext);
+        // TODO: move sql context to reader/writer
+        SQLContext sqlContext = new org.apache.spark.sql.SQLContext(javaSparkContext);
 
         // initialize meetup connection keys
         // Stub for keys
         // TODO: provide file path as a parameter
-        JavaRDD<String> keysRDD = javaSparkContext.textFile("meetupkeys");
+        JavaRDD<String> keysRDD = javaSparkContext.textFile(props.getMeetupProp().getPathToKeys());
         List<String> keysArr = keysRDD.collect();
         javaSparkContext.broadcast(keysArr);
 
@@ -78,7 +79,7 @@ public class KeywordsMatcher {
 
         // save as hive table
         // TODO: generate valid file name
-        dataFrame.write().format("orc").option("header", "false").save("tstkw");
+        dataFrame.write().format("orc").option("header", "false").save(props.getHiveProp().getTableSavePath());
     }
 
     private static class SNKeywordsMapper implements PairFlatMapFunction<TaggedClick, TaggedClick, List<WeightedKeyword>> {

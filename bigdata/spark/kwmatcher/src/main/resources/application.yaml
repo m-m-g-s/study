@@ -1,0 +1,7 @@
+spark:
+  appName: Keywords Matcher
+  duration: 2000
+meetup:
+  pathToKeys: meetupkeys
+hive:
+  tableSavePath:  tstkw
