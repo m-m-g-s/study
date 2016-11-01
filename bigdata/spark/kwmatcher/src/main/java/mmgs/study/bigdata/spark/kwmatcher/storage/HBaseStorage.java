@@ -12,7 +12,7 @@ import org.apache.spark.sql.SQLContext;
  */
 public class HBaseStorage implements Storage {
     @Override
-    public JavaRDD<TaggedClick> readTaggedClicks(SQLContext sqlContext) {
-        return HBaseStorageHelper.readTaggedClicks(sqlContext);
+    public JavaRDD<TaggedClick> readTaggedClicks(SQLContext sqlContext, String filterDate) {
+        return HBaseStorageHelper.readTaggedClicks(sqlContext, filterDate);
     }
 }

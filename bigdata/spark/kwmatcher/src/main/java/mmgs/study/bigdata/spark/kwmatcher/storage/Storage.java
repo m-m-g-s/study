@@ -10,6 +10,6 @@ import org.apache.spark.sql.SQLContext;
  *
  */
 public interface Storage {
-    JavaRDD<TaggedClick> readTaggedClicks(SQLContext sqlContext);
+    JavaRDD<TaggedClick> readTaggedClicks(SQLContext sqlContext, String filterDate);
 }
 

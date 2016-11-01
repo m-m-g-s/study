@@ -34,19 +34,16 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.properties.version}</artifactId>
             <version>${spark.version}</version>
-            <!--            <scope>provided</scope>-->
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.properties.version}</artifactId>
             <version>${spark.version}</version>
-            <!--            <scope>provided</scope>-->
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive_${scala.properties.version}</artifactId>
             <version>${spark.version}</version>
-            <!--            <scope>provided</scope>-->
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.httpcomponents</groupId>
@@ -58,13 +55,11 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.properties.version}</artifactId>
             <version>${spark.version}</version>
-            <!--            <scope>provided</scope>-->
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-streaming_${scala.properties.version}</artifactId>
             <version>${spark.version}</version>
-            <!--            <scope>provided</scope>-->
         </dependency>
 
         <!-- Phoenix -->
@@ -72,7 +67,6 @@
             <groupId>org.apache.phoenix</groupId>
             <artifactId>phoenix-spark</artifactId>
             <version>${phoenix.version}</version>
-            <!--            <scope>provided</scope>-->
         </dependency>
 
         <!-- Simple REST client -->
@@ -192,6 +186,32 @@
                     <execution>
                         <id>default-compile</id>
                         <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.2.1</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <outputDirectory>${basedir}</outputDirectory>
+                    <finalName>${artifactId}</finalName>
+                    <appendAssemblyId>false</appendAssemblyId>
+                    <archive>
+                        <manifest>
+                            <mainClass>mmgs.study.bigdata.spark.kwmatcher.KeywordsMatcher</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>

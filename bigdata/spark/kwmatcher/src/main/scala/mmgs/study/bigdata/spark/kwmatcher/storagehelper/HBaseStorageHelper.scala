@@ -7,14 +7,15 @@ import org.apache.spark.sql.SQLContext
 
 object HBaseStorageHelper {
 
-  def readTaggedClicks(sqlContext: SQLContext) = {
+  def readTaggedClicks(sqlContext: SQLContext, filterDate: String) = {
     // TODO: Configuratiion is to be moved to global settings
     val configuration = new Configuration()
     val df = sqlContext.phoenixTableAsDataFrame(
-      "TAG_CLICK"
-      , Array("ID", "DT", "KW", "LAT", "LON")
+      "LOG_TABLEF3"
+      , Array("BID_ID", "TIMESTAMP_DATE", "TAGS_LIST", "LAT", "LON")
       // TODO: predicate is to be specified (by date, parametrized)
       //, predicate = Some("\"LAT\" = 40.6643")
+      , predicate = Some("\"SUBSTR(TIMESTAMP_DATE, 0, 8)\" = '" + filterDate + "'")
       , conf = configuration
     )
     // debugging
