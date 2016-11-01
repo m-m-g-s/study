@@ -15,13 +15,12 @@ public class JavaConfig {
 
     @Bean
     public SparkConf sparkConf(AppProperties conf) {
-        return new SparkConf()
-                .setAppName(conf.getSparkProp().getAppName());
+        return new SparkConf().setAppName(conf.getSparkProp().getAppName());
     }
 
     @Bean
-    public JavaStreamingContext streamingContext(SparkConf sparkConf,AppProperties conf) {
+    public JavaStreamingContext streamingContext(SparkConf sparkConf, AppProperties conf) {
         int duration = conf.getSparkProp().getDuration();
-        return new JavaStreamingContext(sparkConf,new Duration(duration));
+        return new JavaStreamingContext(sparkConf, new Duration(duration));
     }
 }
