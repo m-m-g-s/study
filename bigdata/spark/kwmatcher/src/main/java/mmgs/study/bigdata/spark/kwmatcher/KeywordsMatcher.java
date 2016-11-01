@@ -19,8 +19,10 @@ import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.hive.HiveContext;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
 import scala.Tuple2;
 
 import java.io.IOException;
@@ -28,6 +30,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@ComponentScan
+@EnableAutoConfiguration
 public class KeywordsMatcher {
 
     private static final int TOP_AMT = 10;

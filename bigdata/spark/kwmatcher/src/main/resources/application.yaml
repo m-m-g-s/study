@@ -1,7 +1,7 @@
-spark:
+sparkProp:
   appName: Keywords Matcher
   duration: 2000
-meetup:
+meetupProp:
   pathToKeys: meetupkeys
-hive:
+hiveProp:
   tableSavePath:  tstkw
