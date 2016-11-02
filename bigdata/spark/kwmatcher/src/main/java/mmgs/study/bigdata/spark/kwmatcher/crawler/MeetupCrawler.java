@@ -3,6 +3,7 @@ package mmgs.study.bigdata.spark.kwmatcher.crawler;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.JsonNode;
 import mmgs.study.bigdata.spark.kwmatcher.tokenizer.KeywordsExtractor;
+import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -14,6 +15,8 @@ import java.util.*;
  *
  */
 public abstract class MeetupCrawler implements SNCrawler, Serializable {
+    private static Logger LOG = Logger.getLogger(MeetupEventsCrawler.class);
+
     private static final int SUCCESS = 200;
 
     protected static final String BASE_REQUEST = "https://api.meetup.com/2/";
@@ -36,15 +39,28 @@ public abstract class MeetupCrawler implements SNCrawler, Serializable {
         return response.getStatus() == SUCCESS;
     }
 
-    public List<SNItem> extractSNItems(JSONArray jsonArray) throws IOException {
+    public List<SNItem> extractSNItems(HttpResponse<JsonNode> jsonResponse) {
         List<SNItem> snItems = new ArrayList<>();
-        Iterator<Object> iterator = jsonArray.iterator();
-        while (iterator.hasNext()) {
-            SNItem snItem = extractSNItem((JSONObject) iterator.next());
-            KeywordsExtractor.getKeywordsList(snItem.getDescription());
-            snItems.add(snItem);
+        if (dataExtracted(jsonResponse)) {
+            JSONArray jsonArray = jsonResponse.getBody().getObject().getJSONArray("results");
+            if (jsonArray.length() > 0) {
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    try {
+                        SNItem snItem = extractSNItem(jsonArray.getJSONObject(i));
+                        KeywordsExtractor.getKeywordsList(snItem.getDescription());
+                        snItems.add(snItem);
+                    } catch (Exception e) {
+                        LOG.info(e);
+                        LOG.info(jsonArray.getJSONObject(i).toString(3));
+                        e.printStackTrace();
+                    }
+                }
+                snItems = Collections.unmodifiableList(snItems);
+            }
+        } else {
+            LOG.info(jsonResponse.getStatus());
         }
-        return Collections.unmodifiableList(snItems);
+        return snItems;
     }
 
     public abstract SNItem extractSNItem(JSONObject json);

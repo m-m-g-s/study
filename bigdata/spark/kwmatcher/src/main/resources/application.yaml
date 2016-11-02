@@ -2,6 +2,8 @@ sparkProp:
   appName: Keywords Matcher
   duration: 2000
 meetupProp:
-  pathToKeys: meetupkeys
+  pathToKeys: /data/conf/meetupkeys
+hbaseProp:
+  zookeeper: sandbox.hortonworks.com:2181:/hbase-unsecure
 hiveProp:
-  tableSavePath:  tstkw
+  tableSavePath:  sn_kw

@@ -1,7 +1,10 @@
 package mmgs.study.bigdata.spark.kwmatcher;
 
 import mmgs.study.bigdata.spark.kwmatcher.conf.AppProperties;
-import mmgs.study.bigdata.spark.kwmatcher.crawler.*;
+import mmgs.study.bigdata.spark.kwmatcher.crawler.MeetupEventsCrawler;
+import mmgs.study.bigdata.spark.kwmatcher.crawler.MeetupVenuesCrawler;
+import mmgs.study.bigdata.spark.kwmatcher.crawler.SNCrawler;
+import mmgs.study.bigdata.spark.kwmatcher.crawler.SNItem;
 import mmgs.study.bigdata.spark.kwmatcher.model.TaggedClick;
 import mmgs.study.bigdata.spark.kwmatcher.model.TaggedSN;
 import mmgs.study.bigdata.spark.kwmatcher.model.WeightedKeyword;
@@ -26,8 +29,9 @@ import org.springframework.context.annotation.ComponentScan;
 import scala.Tuple2;
 
 import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.stream.Stream;
 
 @ComponentScan
@@ -40,40 +44,45 @@ public class KeywordsMatcher {
         ConfigurableApplicationContext ctx = new SpringApplicationBuilder(KeywordsMatcher.class).run(args);
         AppProperties props = ctx.getBean(AppProperties.class);
 
+        String filterDate = args[1];
         // Initialize spark application
         SparkConf sparkConf = ctx.getBean(SparkConf.class)
                 .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+//                .setMaster("local[*]")
                 .registerKryoClasses(new Class[]{TaggedClick.class, TaggedSN.class});
 
         JavaSparkContext javaSparkContext = new JavaSparkContext(sparkConf);
-        SQLContext sqlContext = new org.apache.spark.sql.SQLContext(javaSparkContext);
+        SQLContext sqlContext = new SQLContext(javaSparkContext);
 
         // initialize meetup connection keys
+        // Stub for keys
+        // TODO: provide file path as a parameter
         JavaRDD<String> keysRDD = javaSparkContext.textFile(props.getMeetupProp().getPathToKeys());
         List<String> keysArr = keysRDD.collect();
         javaSparkContext.broadcast(keysArr);
 
         // initialize click dataset
         Storage storage = new HBaseStorage();
-        JavaRDD<TaggedClick> taggedClicksRDD = storage.readTaggedClicks(sqlContext);
+        JavaRDD<TaggedClick> taggedClicksRDD = storage.readTaggedClicks(sqlContext, props.getHbaseProp().getZookeeper(), filterDate);
+        taggedClicksRDD = taggedClicksRDD.map(new Function<TaggedClick, TaggedClick>() {
+            @Override
+            public TaggedClick call(TaggedClick taggedClick) throws Exception {
+                taggedClick.setDay(taggedClick.getDay().substring(0, 8));
+                taggedClick.setTags(taggedClick.getTags().replace(",", " "));
+                return taggedClick;
+            }
+        }).distinct();
+
 
         SNCrawler eventsCrawler = new MeetupEventsCrawler();
         SNCrawler venuesCrawler = new MeetupVenuesCrawler();
-
-/*
-        try {
-            venuesCrawler.extract(new TaggedClick("xyz1", "20161031", 40.6643, -73.9385, "java, scala"), keysArr.get(1));
-            System.out.println();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-*/
 
         // transformations
         // extract keywords for each click
         // TODO: make sure that keywords are delimited by spaces
         JavaPairRDD<TaggedClick, List<WeightedKeyword>> enrichedTaggedClicksRDD = taggedClicksRDD.flatMapToPair(new PairFlatMapFunction<TaggedClick, TaggedClick, List<WeightedKeyword>>() {
             private final Random random = new Random();
+
             @Override
             public Iterable<Tuple2<TaggedClick, List<WeightedKeyword>>> call(TaggedClick taggedClick) throws Exception {
                 int i = random.nextInt(keysArr.size());
@@ -95,10 +104,15 @@ public class KeywordsMatcher {
             }
         });
 
-        System.out.println(enrichedTaggedClicksRDD.first());
+//        System.out.println(enrichedTaggedClicksRDD.first());
 
-        // combine clicks for identical date+location+keywords
-        JavaPairRDD<TaggedClick,  List<WeightedKeyword>> aggregatedTaggedClicksRDD = enrichedTaggedClicksRDD
+        // combine clicks for identical
+        JavaPairRDD<TaggedClick, List<WeightedKeyword>> aggregatedTaggedClicksRDD = enrichedTaggedClicksRDD.filter(new Function<Tuple2<TaggedClick, List<WeightedKeyword>>, Boolean>() {
+            @Override
+            public Boolean call(Tuple2<TaggedClick, List<WeightedKeyword>> taggedClickListTuple2) throws Exception {
+                return taggedClickListTuple2._2().size() > 0 ? true: false;
+            }
+        })
                 .reduceByKey((Function2<List<WeightedKeyword>, List<WeightedKeyword>, List<WeightedKeyword>>) (keywords1, keywords2) -> {
                     List<WeightedKeyword> keywords = new ArrayList<>();
                     keywords.addAll(keywords1);
@@ -106,7 +120,7 @@ public class KeywordsMatcher {
                     return keywords;
                 });
 
-        System.out.println(aggregatedTaggedClicksRDD.first());
+//        System.out.println(aggregatedTaggedClicksRDD.first());
         // convert to final dataset structure
         JavaRDD<TaggedSN> snTaggedRDD = aggregatedTaggedClicksRDD.map(
                 (Function<Tuple2<TaggedClick, List<WeightedKeyword>>, TaggedSN>) taggedClickListTuple2
@@ -118,10 +132,11 @@ public class KeywordsMatcher {
         // debugging
         dataFrame.show();
 
+        dataFrame.registerTempTable(props.getHiveProp().getTableSavePath() + filterDate);
+
         // save as hive table
         // TODO: generate valid file name
-        dataFrame.write().format("orc").option("header", "false").save(props.getHiveProp().getTableSavePath());
+        dataFrame.write().format("orc").insertInto(props.getHiveProp().getTableSavePath());
     }
-
 }
 

@@ -4,14 +4,14 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 import mmgs.study.bigdata.spark.kwmatcher.model.TaggedClick;
+import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MeetupVenuesCrawler extends MeetupCrawler {
+    private static Logger LOG = Logger.getLogger(MeetupEventsCrawler.class);
+
     private static final String VENUES_REQUEST = "open_venues";
     private static final Map<String, Object> FIELDS_PARAM = initFieldsParams();
 
@@ -22,22 +22,21 @@ public class MeetupVenuesCrawler extends MeetupCrawler {
     }
 
     @Override
-    public List<SNItem> extract(TaggedClick taggedClick, String connectionKey) throws Exception {
-        HttpResponse<JsonNode> jsonResponse = Unirest.get(BASE_REQUEST + VENUES_REQUEST + RESPONSE_FORMAT)
-                .queryString(QUERY_PARAMS)
-                .queryString(KEY_PARAM, connectionKey)
-                .queryString(TEXT_PARAM, taggedClick.getTags())
-                .queryString(LATITUDE_PARAM, Double.toString(taggedClick.getLatitude()))
-                .queryString(LONGITUDE_PARAM, Double.toString(taggedClick.getLongitude()))
-                .queryString(FIELDS_PARAM)
-                .asJson();
-
-        if (dataExtracted(jsonResponse)) {
-            return extractSNItems(jsonResponse.getBody().getObject().getJSONArray("results"));
-        } else {
-            // TODO: handle exceptions properly
-            System.out.println(jsonResponse.getStatus());
-            throw new Exception("Something went wrong");
+    public List<SNItem> extract(TaggedClick taggedClick, String connectionKey) {
+        try {
+            HttpResponse<JsonNode> jsonResponse = Unirest.get(BASE_REQUEST + VENUES_REQUEST + RESPONSE_FORMAT)
+                    .queryString(QUERY_PARAMS)
+                    .queryString(KEY_PARAM, connectionKey)
+                    .queryString(TEXT_PARAM, taggedClick.getTags())
+                    .queryString(LATITUDE_PARAM, Double.toString(taggedClick.getLatitude()))
+                    .queryString(LONGITUDE_PARAM, Double.toString(taggedClick.getLongitude()))
+                    .queryString(FIELDS_PARAM)
+                    .asJson();
+            return extractSNItems(jsonResponse);
+        } catch (Exception e) {
+            LOG.error(e);
+            e.printStackTrace();
+            return new ArrayList<>();
         }
     }
 

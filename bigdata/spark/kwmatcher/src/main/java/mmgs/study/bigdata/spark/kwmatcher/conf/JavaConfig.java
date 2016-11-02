@@ -1,6 +1,8 @@
 package mmgs.study.bigdata.spark.kwmatcher.conf;
 
 import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -16,11 +18,5 @@ public class JavaConfig {
     @Bean
     public SparkConf sparkConf(AppProperties conf) {
         return new SparkConf().setAppName(conf.getSparkProp().getAppName());
-    }
-
-    @Bean
-    public JavaStreamingContext streamingContext(SparkConf sparkConf, AppProperties conf) {
-        int duration = conf.getSparkProp().getDuration();
-        return new JavaStreamingContext(sparkConf, new Duration(duration));
     }
 }

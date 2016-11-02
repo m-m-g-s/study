@@ -3,6 +3,7 @@ package mmgs.study.bigdata.spark.kwmatcher.conf;
 /**
  * Created by Aliaksei_Neuski on 10/28/16.
  */
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.io.Serializable;
@@ -13,6 +14,7 @@ public class AppProperties implements Serializable {
     private SparkProp sparkProp = new SparkProp();
     private HiveProp hiveProp = new HiveProp();
     private MeetupProp meetupProp = new MeetupProp();
+    private HbaseProp hbaseProp = new HbaseProp();
 
     public SparkProp getSparkProp() {
         return sparkProp;
@@ -24,6 +26,10 @@ public class AppProperties implements Serializable {
 
     public MeetupProp getMeetupProp() {
         return meetupProp;
+    }
+
+    public HbaseProp getHbaseProp() {
+        return hbaseProp;
     }
 
     public static class SparkProp implements Serializable {
@@ -70,5 +76,17 @@ public class AppProperties implements Serializable {
             this.pathToKeys = pathToKeys;
         }
 
+    }
+
+    public static class HbaseProp implements Serializable {
+        private String zookeeper;
+
+        public String getZookeeper() {
+            return zookeeper;
+        }
+
+        public void setZookeeper(String zookeeper) {
+            this.zookeeper = zookeeper;
+        }
     }
 }
