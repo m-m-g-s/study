@@ -12,6 +12,7 @@ public class TaggedSN implements Serializable {
     private double latitude;
     private String tags;
     private String snKeywords;
+    private long impression;
 
     public TaggedSN(TaggedClick taggedClick, String snKeywords) {
         this.id = taggedClick.getId();
@@ -20,6 +21,7 @@ public class TaggedSN implements Serializable {
         this.latitude = taggedClick.getLatitude();
         this.tags = taggedClick.getTags();
         this.snKeywords = snKeywords;
+        this.impression = taggedClick.getImpression();
     }
 
     public String getId() {
@@ -68,5 +70,44 @@ public class TaggedSN implements Serializable {
 
     public void setSnKeywords(String snKeywords) {
         this.snKeywords = snKeywords;
+    }
+
+    public long getImpression() {
+        return impression;
+    }
+
+    public void setImpression(long impression) {
+        this.impression = impression;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        TaggedSN taggedSN = (TaggedSN) o;
+
+        return Double.compare(taggedSN.longitude, longitude) == 0
+                && Double.compare(taggedSN.latitude, latitude) == 0
+                && id.equals(taggedSN.id)
+                && day.equals(taggedSN.day)
+                && tags.equals(taggedSN.tags)
+                && snKeywords.equals(taggedSN.snKeywords);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result;
+        long temp;
+        result = id.hashCode();
+        result = 31 * result + day.hashCode();
+        temp = Double.doubleToLongBits(longitude);
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(latitude);
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        result = 31 * result + tags.hashCode();
+        result = 31 * result + snKeywords.hashCode();
+        return result;
     }
 }

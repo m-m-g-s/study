@@ -13,4 +13,3 @@ public interface Storage {
     // TODO: no zookeeper should be present in Storage interface
     JavaRDD<TaggedClick> readTaggedClicks(SQLContext sqlContext, String zookeeperQuorum, String filterDate);
 }
-

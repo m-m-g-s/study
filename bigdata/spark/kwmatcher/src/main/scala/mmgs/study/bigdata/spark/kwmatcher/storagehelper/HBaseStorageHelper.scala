@@ -10,13 +10,11 @@ object HBaseStorageHelper {
     val df = sqlContext.phoenixTableAsDataFrame(
       "LOG_TABLEF3"
       , Array("USER_TAGS", "TIMESTAMP_DATE", "TAGS_LIST", "LAT", "LON")
-      // TODO: predicate is to be specified (by date, parametrized)
-//      , predicate = Some("\"LAT\" = 40.6643")
       , predicate = Some("\"TIMESTAMP_DATE\" like '" + filterDate + "%'")
       , zkUrl = Some(zookeeperQuorum)
     )
     // debugging
     df.show()
-    df.map(i => new TaggedClick(i(0).toString, i(1).toString, i(3).toString.toDouble, i(4).toString.toDouble, i(2).toString)).toJavaRDD()
+    df.map(i => new TaggedClick(i(0).toString, i(1).toString, i(3).toString.toDouble, i(4).toString.toDouble, i(2).toString, 1)).toJavaRDD()
   }
 }
