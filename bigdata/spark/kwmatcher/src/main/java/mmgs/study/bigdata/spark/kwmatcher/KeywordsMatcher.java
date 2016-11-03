@@ -71,6 +71,7 @@ public class KeywordsMatcher {
             return taggedClick;
         });
 
+        // combine clicks for identical
         taggedClicksRDD = taggedClicksRDD.mapToPair((PairFunction<TaggedClick, TaggedClick, Long>) taggedClick -> new Tuple2<>(taggedClick, taggedClick.getImpression()))
                 .reduceByKey((a, b) -> a + b)
                 .map((Function<Tuple2<TaggedClick, Long>, TaggedClick>) taggedClickLongTuple2 -> {
@@ -107,7 +108,6 @@ public class KeywordsMatcher {
             }
         });
 
-        // combine clicks for identical
         JavaPairRDD<TaggedClick, List<WeightedKeyword>> aggregatedTaggedClicksRDD =
                 enrichedTaggedClicksRDD.filter((Function<Tuple2<TaggedClick, List<WeightedKeyword>>, Boolean>) taggedClickListTuple2 -> taggedClickListTuple2._2().size() > 0)
                         .reduceByKey((Function2<List<WeightedKeyword>, List<WeightedKeyword>, List<WeightedKeyword>>) (keywords1, keywords2) -> {
