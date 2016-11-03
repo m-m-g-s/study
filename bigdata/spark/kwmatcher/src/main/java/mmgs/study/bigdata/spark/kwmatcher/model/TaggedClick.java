@@ -64,8 +64,6 @@ public class TaggedClick implements Serializable {
                 '}';
     }
 
-    public void clearId() {this.id = null;}
-
     public String getId() {
         return id;
     }

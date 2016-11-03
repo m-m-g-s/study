@@ -73,6 +73,7 @@ public class KeywordsMatcher {
             }
         }).distinct();
 
+        System.out.println(taggedClicksRDD.first());
 
         SNCrawler eventsCrawler = new MeetupEventsCrawler();
         SNCrawler venuesCrawler = new MeetupVenuesCrawler();
@@ -99,26 +100,24 @@ public class KeywordsMatcher {
                         return new ArrayList<WeightedKeyword>();
                     }
                 });
-                taggedClick.clearId();
                 return listStream.map(x -> new Tuple2<>(taggedClick, x))::iterator;
             }
         });
 
-//        System.out.println(enrichedTaggedClicksRDD.first());
+        System.out.println(enrichedTaggedClicksRDD.first());
 
         // combine clicks for identical
         JavaPairRDD<TaggedClick, List<WeightedKeyword>> aggregatedTaggedClicksRDD = enrichedTaggedClicksRDD.filter(new Function<Tuple2<TaggedClick, List<WeightedKeyword>>, Boolean>() {
             @Override
             public Boolean call(Tuple2<TaggedClick, List<WeightedKeyword>> taggedClickListTuple2) throws Exception {
-                return taggedClickListTuple2._2().size() > 0 ? true: false;
+                return taggedClickListTuple2._2().size() > 0 ? true : false;
             }
-        })
-                .reduceByKey((Function2<List<WeightedKeyword>, List<WeightedKeyword>, List<WeightedKeyword>>) (keywords1, keywords2) -> {
-                    List<WeightedKeyword> keywords = new ArrayList<>();
-                    keywords.addAll(keywords1);
-                    keywords.addAll(keywords2);
-                    return keywords;
-                });
+        }).reduceByKey((Function2<List<WeightedKeyword>, List<WeightedKeyword>, List<WeightedKeyword>>) (keywords1, keywords2) -> {
+            List<WeightedKeyword> keywords = new ArrayList<>();
+            keywords.addAll(keywords1);
+            keywords.addAll(keywords2);
+            return keywords;
+        });
 
 //        System.out.println(aggregatedTaggedClicksRDD.first());
         // convert to final dataset structure

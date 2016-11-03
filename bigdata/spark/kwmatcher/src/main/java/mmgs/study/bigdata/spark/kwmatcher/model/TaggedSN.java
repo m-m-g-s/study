@@ -6,6 +6,7 @@ import java.io.Serializable;
  *
  */
 public class TaggedSN implements Serializable {
+    private String id;
     private String day;
     private double longitude;
     private double latitude;
@@ -13,11 +14,20 @@ public class TaggedSN implements Serializable {
     private String snKeywords;
 
     public TaggedSN(TaggedClick taggedClick, String snKeywords) {
+        this.id = taggedClick.getId();
         this.day = taggedClick.getDay();
         this.longitude = taggedClick.getLongitude();
         this.latitude = taggedClick.getLatitude();
         this.tags = taggedClick.getTags();
         this.snKeywords = snKeywords;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getDay() {

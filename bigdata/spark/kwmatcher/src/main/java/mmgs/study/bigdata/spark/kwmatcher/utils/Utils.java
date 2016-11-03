@@ -25,6 +25,5 @@ public class Utils {
         LocalDate date = LocalDate.parse(day, DateTimeFormatter.ofPattern(DATE_FORMAT));
         ZonedDateTime zDate = date.atStartOfDay().atZone(ZoneId.of(TIMEZONE));
         return "" + zDate.minusWeeks(1).toInstant().toEpochMilli() + ',' + zDate.plusWeeks(1).toInstant().toEpochMilli();
-
     }
 }
