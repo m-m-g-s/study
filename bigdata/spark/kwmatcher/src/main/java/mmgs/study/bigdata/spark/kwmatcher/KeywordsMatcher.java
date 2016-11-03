@@ -52,7 +52,6 @@ public class KeywordsMatcher {
         // Initialize spark application
         SparkConf sparkConf = ctx.getBean(SparkConf.class)
                 .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-//                .setMaster("local[*]")
                 .registerKryoClasses(new Class[]{TaggedClick.class, TaggedSN.class});
 
         JavaSparkContext javaSparkContext = new JavaSparkContext(sparkConf);
@@ -127,7 +126,7 @@ public class KeywordsMatcher {
         DataFrame dataFrame = hiveContext.createDataFrame(snTaggedRDD.rdd(), TaggedSN.class);
 
         // debugging
-        dataFrame.show();
+//        dataFrame.show();
 
         dataFrame.registerTempTable(props.getHiveProp().getTableSavePath() + Utils.remapDay(filterDate));
 

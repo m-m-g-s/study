@@ -14,7 +14,7 @@ object HBaseStorageHelper {
       , zkUrl = Some(zookeeperQuorum)
     )
     // debugging
-    df.show()
+//    df.show()
     df.map(i => new TaggedClick(i(0).toString, i(1).toString, i(3).toString.toDouble, i(4).toString.toDouble, i(2).toString, 1)).toJavaRDD()
   }
 }
